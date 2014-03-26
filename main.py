@@ -4,6 +4,15 @@ from sqlite3 import connect, OperationalError, PARSE_DECLTYPES
 import os
 from datetime import datetime
 
+def bench_mark(func):
+    """Prints how much time a function took."""
+    def new_f(*args):
+        start = datetime.now()
+        func(*args)
+        end = datetime.now()
+        print("Running ", func.__name__, " took:", end - start)
+    return new_f
+
 
 def ical_datetime_to_timestamp(ical_dt):
     """
@@ -12,7 +21,8 @@ def ical_datetime_to_timestamp(ical_dt):
     """
     from sqlite3 import Timestamp
     ical_dt = ical_dt[ical_dt.find(':') + 1:].replace("T", "")
-    return Timestamp(int(ical_dt[:4]), int(ical_dt[4:6]), int(ical_dt[6:8]), int(ical_dt[8:10]) + 2, int(ical_dt[10:11]))
+    #Todo fix in main
+    return Timestamp(int(ical_dt[:4]), int(ical_dt[4:6]), int(ical_dt[6:8]), int(ical_dt[8:10]) + 2, int(ical_dt[10:12]))
 
 
 class DataTypesAbstractClass():
@@ -84,7 +94,6 @@ a_cls_cls = AClass('', '', '', '', dt, dt, '', '', False).__class__
 table_dict = {activ_cls: ("Activity", "(?,?,?,?)"),
               a_cls_cls: ("Class", "(?,?,?,?,?,?,?,?,?)")}
 
-
 def add_to_db(data_type):
     """Adds instances from datatype to correct table_name.
     :type data_type Iterable | AClass | Activity | Notification
@@ -102,19 +111,16 @@ def add_to_db(data_type):
         + db_coloumns, [cls.get_database_row() for cls in data_type])
     db.commit()
 
-
 def connect_to_db():
     """rtype: Connection"""
     db = connect(DATABASE_PATH, detect_types=PARSE_DECLTYPES)
     attempt_tables_creation(db.cursor())
     return db
 
-
 def get_all_classes():
     """:rtype tuple"""
     db = connect_to_db()
     return db.cursor().execute("SELECT * FROM Class").fetchall()
-
 
 def get_attendible_classes():
     db = connect_to_db()
@@ -130,7 +136,6 @@ def remove_all_activities():
     db = connect_to_db()
     db.execute("DELETE * FROM Activity")
     db.commit()
-
 
 def attempt_tables_creation(cursor):
     """If tables do not yet exist, they are created."""
@@ -245,28 +250,18 @@ dt = datetime.now()
 types = ["Productive", "Neutral", "Counterproductive"]
 
 
-def bench_mark(func):
-    """Prints how much time a function took."""
-    def new_f():
-        start = datetime.now()
-        func()
-        end = datetime.now()
-        print("Running ", func.__name__, " took:", end - start)
-    return new_f
-
-
-@bench_mark
 def fill_activity_table():
     """Fills activity table with 100 random Activity instances."""
-    generator = [Activity(types[randint(0, 2)], dt, dt, randint(1, 500)) for i in range(100)]
+    generator = [Activity(types[randint(0, 2)], dt, dt, randint(1, 500)) for i in range(1000)]
     add_to_db(generator)
 
+icp = ICalParser()
+classes = icp.get_classes()
 
 @bench_mark
 def fill_class_table():
     """Fills Class table with classes. From user ical are attendible rest not attendible."""
-    icp = ICalParser()
-    classes = icp.get_classes()
+    global classes
     add_to_db(classes)
 
 if __name__ == "__main__":
@@ -274,5 +269,5 @@ if __name__ == "__main__":
     fill_class_table()
     #If you want to print the tables content
     #[print(act) for act in get_all_activities()]
-    #[print(cls) for cls in get_all_classes()]
-    #[print(cls) for cls in get_attendible_classes()]
+    [print(cls) for cls in get_all_classes()]
+    #print(results[0], results[-1])
