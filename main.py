@@ -4,6 +4,7 @@ from sqlite3 import connect, OperationalError, PARSE_DECLTYPES
 import os
 from datetime import datetime
 
+
 def bench_mark(func):
     """Prints how much time a function took."""
     def new_f(*args):
@@ -14,6 +15,11 @@ def bench_mark(func):
     return new_f
 
 
+#New util function
+def remove_classes_from_name(name):
+    return name[:name.find("[") - 1]
+
+
 def ical_datetime_to_timestamp(ical_dt):
     """
     :param ical_dt: i.e. "20140508T143000Z"
@@ -21,7 +27,7 @@ def ical_datetime_to_timestamp(ical_dt):
     """
     from sqlite3 import Timestamp
     ical_dt = ical_dt[ical_dt.find(':') + 1:].replace("T", "")
-    #Todo fix in main
+    #Todo change in main project
     return Timestamp(int(ical_dt[:4]), int(ical_dt[4:6]), int(ical_dt[6:8]), int(ical_dt[8:10]) + 2, int(ical_dt[10:12]))
 
 
@@ -94,6 +100,7 @@ a_cls_cls = AClass('', '', '', '', dt, dt, '', '', False).__class__
 table_dict = {activ_cls: ("Activity", "(?,?,?,?)"),
               a_cls_cls: ("Class", "(?,?,?,?,?,?,?,?,?)")}
 
+
 def add_to_db(data_type):
     """Adds instances from datatype to correct table_name.
     :type data_type Iterable | AClass | Activity | Notification
@@ -111,20 +118,24 @@ def add_to_db(data_type):
         + db_coloumns, [cls.get_database_row() for cls in data_type])
     db.commit()
 
+
 def connect_to_db():
     """rtype: Connection"""
     db = connect(DATABASE_PATH, detect_types=PARSE_DECLTYPES)
     attempt_tables_creation(db.cursor())
     return db
 
+
 def get_all_classes():
     """:rtype tuple"""
     db = connect_to_db()
     return db.cursor().execute("SELECT * FROM Class").fetchall()
 
+
 def get_attendible_classes():
     db = connect_to_db()
     return db.cursor().execute("SELECT * FROM Class WHERE user_attends = 1").fetchall()
+
 
 def get_all_activities():
     """:rtype Iterable"""
@@ -137,9 +148,9 @@ def remove_all_activities():
     db.execute("DELETE * FROM Activity")
     db.commit()
 
+
 def attempt_tables_creation(cursor):
     """If tables do not yet exist, they are created."""
-    #ToDo implement a check
     try:
         cursor.execute("""CREATE TABLE Class (subject_code TEXT, subject_name TEXT, attending_groups TEXT,
                                 class_type TEXT, start_timestamp TIMESTAMP, end_timestamp TIMESTAMP, classroom TEXT,
@@ -230,7 +241,8 @@ class ICalParser():
         par = self._parameters
         for i in range(len(self._parameters["DTSTART:"])):
             #SUMMARY: returns name
-            self.classes.append(AClass(par["SUMMARY:"][i], par["Subject code: "][i], par["Groups: "][i],
+            #ToDo switch name and code in Main Project
+            self.classes.append(AClass(par["Subject code: "][i], remove_classes_from_name(par["SUMMARY:"][i]), par["Groups: "][i],
                                        par["Type: "][i], par["DTSTART:"][i], par["DTEND:"][i], par["LOCATION:"][i],
                                        par["Academician: "][i], par["Attendible: "][i]))
 
@@ -258,6 +270,7 @@ def fill_activity_table():
 icp = ICalParser()
 classes = icp.get_classes()
 
+
 @bench_mark
 def fill_class_table():
     """Fills Class table with classes. From user ical are attendible rest not attendible."""
@@ -269,5 +282,5 @@ if __name__ == "__main__":
     fill_class_table()
     #If you want to print the tables content
     #[print(act) for act in get_all_activities()]
-    [print(cls) for cls in get_all_classes()]
+    #[print(cls) for cls in get_all_classes()]
     #print(results[0], results[-1])
